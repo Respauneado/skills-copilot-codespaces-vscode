@@ -1,20 +1,70 @@
-// Create a web server
-// 1. Create a web server
-// 2. Create a route for GET /comments
-// 3. Create a route for POST /comments
-// 4. Create a route for GET /comments/:id
-// 5. Create a route for PUT /comments/:id
-// 6. Create a route for DELETE /comments/:id
-// 7. Read the port from the environment variables
-// 8. Listen on the port
-// 9. Make sure the server is working
+// Create web server 
 
 const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
-const comments = [
-    {
-        id: 1,
-        content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquet, justo vel condimentum ultrices, purus massa fringilla eros, ac gravida felis magna id dui. Nulla facilisi. Nullam ac semper turpis, nec dapibus neque. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Duis nec lectus nec odio elementum scelerisque. Proin at lacus nec odio volutpat aliquam. Morbi interdum, nisi vitae maximus cursus, felis leo bibendum erat, vitae placerat velit neque eget urna. Donec euismod, mauris sit amet pellentesque lacinia, massa velit sagittis sapien, in aliquet velit odio quis nulla. Donec ut augue eget elit fermentum pretium. Quisque nec velit eget tellus convallis pretium. Phasellus auctor tellus nec lorem faucibus, ac vehicula libero dapibus. Donec auctor, nunc quis blandit cursus, orci est tempor ipsum, et viverra magna massa ac lectus. Quisque at tempor nisl. Quisque et bibendum sapien.',
-        }
-    ];
+const bodyParser = require('body-parser');
+const cors = require('./cors');
+const authenticate = require('../authenticate');
+const Comments = require('../models/comments');
+const Dishes = require('../models/dishes');
+const commentRouter = express.Router();
+
+commentRouter.use(bodyParser.json());
+
+commentRouter.route('/')
+.options(cors.corsWithOptions, (req, res) => { res.sendStatus(200);})
+.get(cors.cors, (req, res, next) => {
+    Comments.find(req.query)
+    .populate('author')
+    .then((comments) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(comments)
+    }, (err) => next(err))
+    .catch((err) => next(err));
+})
+.post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) =>{
+    if(req.body != null){
+        req.body.author = req.user._id;
+        Comments.create(req.body)
+        .then((comment) => {
+            Comments.findById(comment._id)
+            .populate('author')
+            .then((comment) => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(comment)
+            })
+        }, (err) => next(err))
+        .catch((err) => next(err));
+    }
+    else{
+        err = new Error('Comment not found in request body');
+        err.status = 404;
+        return next(err);
+    }
+})
+.put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) =>{
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /comments');
+})
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) =>{
+    Comments.remove({})
+    .then((resp) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(resp)
+    }, (err) => next(err))
+    .catch((err) => next(err));
+});
+
+commentRouter.route('/:commentId')
+.options(cors.corsWithOptions, (req, res) => { res.sendStatus(200);})
+.get(cors.cors, (req, res, next) => {
+    Comments.findById(req.params.commentId)
+    .populate('author')
+    .then((comment) => {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.json(comment);
+        }); // Agregar llave de cierre faltante
+})
