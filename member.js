@@ -1,12 +1,7 @@
-function skillMember() {
-    var x = document.getElementById("skillMember");
-    if (x.style.display === "none") {
-      x.style.display = "block";
-      document.getElementById("skillMember").style.display = "block";
-      document.getElementById("skillMember").style.transition = "all 2s";
-    } else {
-      x.style.display = "none";
-    }
-  }
-
+function skillsMember() {
+    var member = document.getElementById("member");
+    var memberSkill = document.getElementById("memberSkill");
+    memberSkill.classList.toggle("show");
+    member.classList.toggle("active");
+}
    
